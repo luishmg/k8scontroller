@@ -1,0 +1,40 @@
+k8s_version: "v1.20.2"
+k8s_services_version: "2"
+k8s_domain: "lab.intranet"
+k8s_internal_network: "10.96.0.0/24"
+k8s_apiserver_ip: "10.96.0.1"
+k8s_cluster_dns: "10.96.0.10"
+k8s_cert_dir: "/var/lib/kubernetes/pki/"
+k8s_config_dir: "/var/lib/kubernetes/"
+k8s_scheduler_config: "kube-scheduler.kubeconfig"
+k8s_cntlr_config: "kube-controller-manager.kubeconfig"
+k8s_cluster_cidr: "10.200.0.0/16"
+k8s_admission_plugins:
+  - "NodeRestriction"
+  - "ServiceAccount"
+  - "MutatingAdmissionWebhook"
+  - "ValidatingAdmissionWebhook"
+k8s_apiserver_ext_port: "6443"
+cntlr_name: "cntlr"
+cntlr_directories:
+  - "/var/lib/kubernetes/pki"
+  - "/var/lib/kubelet"
+  - "/var/lib/kube-proxy"
+  - "/var/run/kubernetes"
+  - "/opt/config/"
+  - "/opt/startup/"
+  - "/opt/addons/"
+cntlr_templates:
+  - { src: "bootstrap/bootstrap-controller.sh.j2", dst: "/opt/startup/" }
+  - { src: "bootstrap/copy-certs-and-configs-k8s.sh.j2", dst: "/opt/startup/" }
+  - { src: "bootstrap/kube-apiserver.sh.j2", dst: "/opt/startup/" }
+  - { src: "bootstrap/kube-controller-manager.sh.j2", dst: "/opt/startup/" }
+  - { src: "bootstrap/kube-scheduler.sh.j2", dst: "/opt/startup/" }
+  - { src: "systemd/bootstrap-controller.service.j2", dst: "/etc/systemd/system/" }
+  - { src: "kube-config/apiserver-to-kubelet.yaml.j2", dst: "/opt/config/" }
+  - { src: "addons/coredns.yaml.j2", dst: "/opt/addons/" }
+cntlr_kube_bin:
+  - "/kube-apiserver"
+  - "/kube-controller-manager"
+  - "/kube-scheduler"
+  - "/kubectl"

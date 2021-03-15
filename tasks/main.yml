@@ -1,0 +1,38 @@
+- name: Controller - Create directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0750'
+  loop:
+    '{{ cntlr_directories }}'
+
+- name: Controller - Download kubernetes binary files
+  get_url:
+    url: '{{ k8s_bin_url + k8s_version + item }}'
+    dest: /usr/local/bin/
+    mode: '0755'
+  loop: 
+    '{{ cntlr_kube_bin }}'
+
+- name: Controller - Adding config, startup scripts and Service files
+  template:
+    src: '{{ item.src }}'
+    dest: '{{ item.dst + item.src.split("/")[1].split(".")[0] + "." + item.src.split("/")[1].split(".")[1] }}'
+    owner: root
+    mode: '0750' 
+  loop:
+    '{{ cntlr_templates }}'
+
+- name: Controller - Reload daemon to get the bootstrap.service
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Controller - Enable bootstrap.service
+  ansible.builtin.systemd:
+    name: bootstrap-controller
+    enabled: yes
+
+- name: Controller - Set KUBECONFIG variable
+  copy:
+    dest: /etc/profile.d/kubeconfig.sh
+    content: 'export KUBECONFIG=/var/lib/kubernetes/admin.kubeconfig'

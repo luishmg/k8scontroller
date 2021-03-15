@@ -1,0 +1,12 @@
+[Unit]
+Description=Bootstrap Kubernetes Controller
+After=network.target
+Requires=network.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/startup/bootstrap-controller.sh
+
+[Install]
+WantedBy=default.target

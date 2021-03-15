@@ -1,0 +1,15 @@
+#!/bin/bash
+
+cp -f /vagrant/cert/{{ k8s_ca_cert }} /vagrant/cert/{{ k8s_ca_key }} \
+  /vagrant/cert/{{ k8s_apiserver_cert }} /vagrant/cert/{{ k8s_apiserver_key }} \
+  /vagrant/cert/{{ k8s_account_cert }} /vagrant/cert/{{ k8s_account_key }} \
+  /vagrant/cert/{{ etcd_cert }} /vagrant/cert/{{ etcd_key }} \
+  /var/lib/kubernetes/pki/
+
+cp -f /vagrant/config/encryption-config.yaml /var/lib/kubernetes/
+
+cp -f /vagrant/config/admin.kubeconfig /var/lib/kubernetes/
+
+cp -f /vagrant/config/kube-scheduler.kubeconfig /var/lib/kubernetes/
+
+cp -f /vagrant/config/kube-controller-manager.kubeconfig /var/lib/kubernetes/

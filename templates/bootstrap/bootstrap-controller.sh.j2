@@ -1,0 +1,92 @@
+#!/bin/bash
+
+function log() {
+    echo "[$(date --iso-8601=seconds)] $1" >> /var/log/bootstrap-etcd.log
+}
+
+log "Starting Bootstrap"
+INTERNAL_IP=$(ip addr show eth1 | grep "inet " | awk '{print $2}' | cut -d / -f 1)
+while [ -z "$INTERNAL_IP" ]; do
+    log "Waiting 1 second for the network interface...";
+    sleep 1;
+    INTERNAL_IP=$(ip addr show eth1 | grep "inet " | awk '{print $2}' | cut -d / -f 1);
+done
+log "Network Interface Started"
+
+log "Copying Certificates"
+while [ ! -f /var/lib/kubernetes/pki/{{ k8s_ca_cert }} ]; do
+    {
+        /opt/startup/copy-certs-and-configs-k8s.sh
+    } || {
+        log "Fail to copy files waiting on second...";   
+    }
+    sleep 1;
+done
+log "Fished from copying the files"
+
+log "Creating kube-apiserver.service file"
+{
+    /opt/startup/kube-apiserver.sh
+    log "kube-apiserver.service file created"
+} || {
+    log "kube-apiserver.service failed to be file created"
+    exit 1
+}
+
+
+log "Creating kube-controller-manager.service file"
+{
+    /opt/startup/kube-controller-manager.sh
+    log "kube-controller-manager.service file created"
+} || {
+    log "kube-controller-manager.service failed to be file created"
+    exit 1
+}
+
+
+log "Creating kube-scheduler.service file"
+{
+    /opt/startup/kube-scheduler.sh
+    log "kube-scheduler.service file created"
+} || {
+    log "kube-scheduler.service failed to be file created"
+    exit 1
+}
+
+{
+    systemctl daemon-reload
+    log "Systemd services reloaded" 
+} || {
+    log "Fail to reload the systemd services"
+    exit 1
+}
+
+{
+    systemctl enable kube-apiserver kube-controller-manager kube-scheduler
+    systemctl restart kube-apiserver kube-controller-manager kube-scheduler
+    log "Kubernetess Controller started successfully"
+} || {
+    log "Kubernetess Controller failed to start"
+    exit 1
+}
+
+{
+    sleep 10
+    /usr/local/bin/kubectl apply --kubeconfig /var/lib/kubernetes/admin.kubeconfig -f /opt/config/apiserver-to-kubelet.yaml
+    log "Kubernetes role apiserver to kubelet, was successfully applied"
+} || {
+    log "Kubernetes role apiserver to kubelet failed to apply"
+    exit 1
+}
+
+{
+    sleep 10
+    /usr/local/bin/kubectl apply --kubeconfig /var/lib/kubernetes/admin.kubeconfig -f /opt/addons/coredns.yaml
+{% if cni == "weaver" %}
+    /usr/local/bin/kubectl apply --kubeconfig /var/lib/kubernetes/admin.kubeconfig -f "https://cloud.weave.works/k8s/net?k8s-version=$(/usr/local/bin/kubectl version | base64 | tr -d '\n')"
+{% endif %}
+    log "Kubernetes addons were added successfully applied"
+} || {
+    log "Kubernetes addons failed to apply"
+    exit 1
+}
