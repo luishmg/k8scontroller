@@ -38,3 +38,11 @@ cntlr_kube_bin:
   - "/kube-controller-manager"
   - "/kube-scheduler"
   - "/kubectl"
+cni_config:
+  calico:
+    - { src: "addons/tigera-operator.yaml.j2", dst: "/opt/addons/" }
+    - { src: "addons/custom-resources.yaml.j2", dst: "/opt/addons/" }
+  weaver:
+    - { src: "addons/missing.yaml.j2", dst: "/opt/addons/" }
+  istio:
+    - { src: "addons/istio-cni.yaml.j2", dst: "/opt/addons/" }

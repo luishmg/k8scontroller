@@ -23,6 +23,16 @@
   loop:
     '{{ cntlr_templates }}'
 
+- name: Controller - Adding CNI config files
+  template:
+    src: '{{ item.src }}'
+    dest: '{{ item.dst + item.src.split("/")[1].split(".")[0] + "." + item.src.split("/")[1].split(".")[1] }}'
+    owner: root
+    mode: '0750' 
+  loop:
+    '{{ cni_config[cni] }}'
+  when: cni is defined
+
 - name: Controller - Reload daemon to get the bootstrap.service
   ansible.builtin.systemd:
     daemon_reload: yes

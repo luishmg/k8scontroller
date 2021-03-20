@@ -70,9 +70,11 @@ log "Creating kube-scheduler.service file"
     exit 1
 }
 
+export KUBECONFIG="/var/lib/kubernetes/admin.kubeconfig"
+
 {
     sleep 10
-    /usr/local/bin/kubectl apply --kubeconfig /var/lib/kubernetes/admin.kubeconfig -f /opt/config/apiserver-to-kubelet.yaml
+    /usr/local/bin/kubectl apply -f /opt/config/apiserver-to-kubelet.yaml
     log "Kubernetes role apiserver to kubelet, was successfully applied"
 } || {
     log "Kubernetes role apiserver to kubelet failed to apply"
@@ -80,11 +82,23 @@ log "Creating kube-scheduler.service file"
 }
 
 {
-    sleep 10
-    /usr/local/bin/kubectl apply --kubeconfig /var/lib/kubernetes/admin.kubeconfig -f /opt/addons/coredns.yaml
-{% if cni == "weaver" %}
-    /usr/local/bin/kubectl apply --kubeconfig /var/lib/kubernetes/admin.kubeconfig -f "https://cloud.weave.works/k8s/net?k8s-version=$(/usr/local/bin/kubectl version | base64 | tr -d '\n')"
+    while [ ! $(/usr/local/bin/kubectl get nodes | awk '{ print $2 }' | grep -i ^notready$ | wc -l) -gt 0 ]; do
+        sleep 1
+        log "Waiting 1 for nodes to begin to register on the cluster...";
+    done 
+{% if cni == "calico" %}
+    until /usr/local/bin/kubectl create -f /opt/addons/tigera-operator.yaml; do log "Trying to deploy tigera-operator again"; done
+    until /usr/local/bin/kubectl create -f /opt/addons/custom-resources.yaml; do log "Trying to deploy tigera-operator again"; done
+{% elif cni == "weaver" %}
+    /usr/local/bin/kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(/usr/local/bin/kubectl version | base64 | tr -d '\n')"
+{% elif cni == "istio" %}
+    until /usr/local/bin/kubectl create -f /opt/addons/istio-cni.yaml; do log "Trying to deploy istio-cni again"; done
 {% endif %}
+    while [ ! $(/usr/local/bin/kubectl get nodes | awk '{ print $2 }' | grep -i ^ready$ | wc -l) -gt 0 ]; do
+        sleep 1
+        log "Waiting 1 for at least one node ready...";
+    done 
+    until /usr/local/bin/kubectl apply -f /opt/addons/coredns.yaml; do log "Trying to deploy istio-cni again"; done
     log "Kubernetes addons were added successfully applied"
 } || {
     log "Kubernetes addons failed to apply"
